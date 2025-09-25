@@ -1,0 +1,13 @@
+{
+  "subject": 21,
+  "mean_hr_bpm": 78.8009158141759,
+  "sdnn_ms": 152.56261234062538,
+  "rmssd_ms": 65.89720385628061,
+  "pnn50_percent": 11.720701307605662,
+  "lf_power": 0.0037638585769437876,
+  "hf_power": 0.0015820163101187385,
+  "lf_hf_ratio": 2.3791528272305174,
+  "interp_freq_hz": 4.0,
+  "figure_path": "/Users/mizuno_shin/dreamdive-Baku/analysis_outputs/hrv_summary_subject21.png",
+  "timeseries_csv": "/Users/mizuno_shin/dreamdive-Baku/analysis_outputs/hr_timeseries_subject21.csv"
+}

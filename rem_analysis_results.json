@@ -1,0 +1,30 @@
+{
+  "session_id": "rem_analysis_001",
+  "timestamp": "2025-09-25T15:33:34.070778",
+  "total_recording_time": 2649.0,
+  "rem_time": 662.5,
+  "rem_percentage": 25.009437523593807,
+  "rem_episodes": 366,
+  "channels_used": {
+    "eog": [
+      "EEG Fpz-Cz",
+      "EEG Pz-Oz"
+    ],
+    "eeg": [
+      "EEG Fpz-Cz",
+      "EEG Pz-Oz"
+    ]
+  },
+  "features_shape": [
+    5298,
+    6
+  ],
+  "rem_statistics": {
+    "mean_score": -2.703763977524277e-15,
+    "std_score": 2.4142068601814897,
+    "threshold": 1.4183144168261694,
+    "max_continuous_rem_minutes": 71.5
+  },
+  "plot_saved": false,
+  "analysis_method": "EOG_EEG_feature_extraction"
+}

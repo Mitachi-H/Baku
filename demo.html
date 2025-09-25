@@ -1,0 +1,1695 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>demo detection and intervention- 19 Channel</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+        background: #000000;
+        min-height: 100vh;
+        color: #ffffff;
+        overflow-x: hidden;
+        position: relative;
+      }
+
+      /* 背景アニメーション */
+      body::before {
+        content: "";
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: radial-gradient(
+            circle at 20% 80%,
+            rgba(120, 119, 198, 0.1) 0%,
+            transparent 50%
+          ),
+          radial-gradient(
+            circle at 80% 20%,
+            rgba(255, 119, 168, 0.05) 0%,
+            transparent 50%
+          ),
+          radial-gradient(
+            circle at 40% 40%,
+            rgba(0, 188, 212, 0.05) 0%,
+            transparent 50%
+          );
+        animation: gradientShift 20s ease infinite;
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      @keyframes gradientShift {
+        0%,
+        100% {
+          transform: rotate(0deg) scale(1);
+        }
+        50% {
+          transform: rotate(180deg) scale(1.1);
+        }
+      }
+
+      .main-container {
+        position: relative;
+        z-index: 1;
+        width: 100%;
+        max-width: 1920px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+
+      /* ヘッダー */
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px 30px;
+        background: rgba(255, 255, 255, 0.03);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 20px;
+        margin-bottom: 30px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+      }
+
+      .header h1 {
+        font-size: 1.8rem;
+        font-weight: 300;
+        letter-spacing: 2px;
+        background: linear-gradient(135deg, #00ffff 0%, #ff00ff 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      .header-info {
+        display: flex;
+        gap: 30px;
+        align-items: center;
+      }
+
+      .status-indicator {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 16px;
+        background: rgba(0, 255, 136, 0.1);
+        border: 1px solid rgba(0, 255, 136, 0.3);
+        border-radius: 20px;
+      }
+
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #00ff88;
+        animation: pulse 2s infinite;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+          box-shadow: 0 0 0 0 rgba(0, 255, 136, 0.7);
+        }
+        50% {
+          opacity: 0.5;
+          box-shadow: 0 0 0 10px rgba(0, 255, 136, 0);
+        }
+      }
+
+      /* メインレイアウト */
+      .main-layout {
+        display: grid;
+        grid-template-columns: 280px 1fr 320px;
+        gap: 20px;
+        margin-bottom: 20px;
+      }
+
+      /* パネル共通スタイル */
+      .panel {
+        background: rgba(255, 255, 255, 0.02);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 20px;
+        padding: 20px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+      }
+
+      /* 左サイドバー */
+      .left-sidebar {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      .stage-indicator {
+        text-align: center;
+        padding: 20px;
+        background: linear-gradient(
+          135deg,
+          rgba(0, 255, 255, 0.05) 0%,
+          rgba(255, 0, 255, 0.05) 100%
+        );
+        border-radius: 15px;
+      }
+
+      .current-stage {
+        font-size: 2.5rem;
+        font-weight: bold;
+        margin: 10px 0;
+        text-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+      }
+
+      .stage-subtitle {
+        font-size: 0.9rem;
+        opacity: 0.7;
+      }
+
+      .stage-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .stage-item {
+        padding: 12px;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 10px;
+        transition: all 0.3s ease;
+        cursor: pointer;
+      }
+
+      .stage-item:hover {
+        background: rgba(255, 255, 255, 0.05);
+        transform: translateX(5px);
+      }
+
+      .stage-item.active {
+        background: linear-gradient(
+          135deg,
+          rgba(0, 255, 136, 0.2) 0%,
+          rgba(0, 188, 212, 0.2) 100%
+        );
+        border-color: rgba(0, 255, 136, 0.5);
+        box-shadow: 0 0 20px rgba(0, 255, 136, 0.2);
+      }
+
+      .stage-item.rem-active {
+        background: linear-gradient(
+          135deg,
+          rgba(255, 0, 127, 0.2) 0%,
+          rgba(127, 0, 255, 0.2) 100%
+        );
+        border-color: rgba(255, 0, 127, 0.5);
+        animation: remGlow 2s ease-in-out infinite;
+      }
+
+      @keyframes remGlow {
+        0%,
+        100% {
+          box-shadow: 0 0 20px rgba(255, 0, 127, 0.3);
+        }
+        50% {
+          box-shadow: 0 0 40px rgba(255, 0, 127, 0.6);
+        }
+      }
+
+      /* 中央：波形表示 */
+      .waveform-container {
+        background: #000000;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 20px;
+        padding: 0;
+        overflow: hidden;
+        box-shadow: inset 0 0 50px rgba(0, 0, 0, 0.5),
+          0 0 100px rgba(0, 188, 212, 0.1);
+      }
+
+      .waveform-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 15px 20px;
+        background: rgba(255, 255, 255, 0.02);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      }
+
+      .waveform-title {
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        opacity: 0.7;
+      }
+
+      .montage-selector select {
+        background: rgba(0, 0, 0, 0.5);
+        color: #00ff88;
+        border: 1px solid rgba(0, 255, 136, 0.3);
+        padding: 6px 12px;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+
+      .montage-selector select:hover {
+        background: rgba(0, 255, 136, 0.1);
+        border-color: rgba(0, 255, 136, 0.5);
+      }
+
+      .channels-display {
+        padding: 10px;
+        background: #000000;
+      }
+
+      .channel-row {
+        display: flex;
+        align-items: center;
+        margin-bottom: 2px;
+        position: relative;
+        background: rgba(0, 0, 0, 0.5);
+        border-radius: 4px;
+        overflow: hidden;
+        transition: background 0.3s ease;
+      }
+
+      .channel-row:hover {
+        background: rgba(0, 255, 136, 0.02);
+      }
+
+      .channel-label {
+        position: absolute;
+        left: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 60px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #00ff88;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        z-index: 10;
+        text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+      }
+
+      .channel-canvas {
+        width: 100%;
+        height: 80px;
+        display: block;
+      }
+
+      /* 右サイドバー */
+      .right-sidebar {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      .metrics-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+      }
+
+      .metric-card {
+        padding: 15px;
+        background: linear-gradient(
+          135deg,
+          rgba(255, 255, 255, 0.02) 0%,
+          rgba(255, 255, 255, 0.05) 100%
+        );
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        transition: all 0.3s ease;
+      }
+
+      .metric-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 20px rgba(0, 188, 212, 0.2);
+      }
+
+      .metric-label {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        opacity: 0.5;
+        margin-bottom: 5px;
+      }
+
+      .metric-value {
+        font-size: 1.4rem;
+        font-weight: bold;
+        background: linear-gradient(135deg, #00ffff 0%, #00ff88 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      /* スペクトラムアナライザー */
+      .spectrum-analyzer {
+        padding: 20px;
+        background: linear-gradient(
+          180deg,
+          rgba(0, 0, 0, 0.5) 0%,
+          rgba(0, 0, 0, 0.8) 100%
+        );
+        border-radius: 15px;
+        border: 1px solid rgba(0, 255, 136, 0.1);
+      }
+
+      .spectrum-title {
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 15px;
+        opacity: 0.7;
+      }
+
+      .spectrum-bars {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        height: 120px;
+        gap: 8px;
+      }
+
+      .spectrum-bar {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .bar-container {
+        width: 100%;
+        height: 100px;
+        background: rgba(255, 255, 255, 0.02);
+        border-radius: 4px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .bar-fill {
+        position: absolute;
+        bottom: 0;
+        width: 100%;
+        background: linear-gradient(to top, #00ff88, #00ffff);
+        transition: height 0.5s ease;
+        box-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
+      }
+
+      .bar-label {
+        font-size: 0.65rem;
+        text-transform: uppercase;
+        opacity: 0.5;
+        text-align: center;
+      }
+
+      /* 電極マップ */
+      .electrode-map {
+        padding: 20px;
+        background: radial-gradient(
+          circle,
+          rgba(0, 188, 212, 0.05) 0%,
+          transparent 70%
+        );
+        border-radius: 15px;
+      }
+
+      .electrode-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 8px;
+        margin-top: 15px;
+      }
+
+      .electrode {
+        width: 35px;
+        height: 35px;
+        border-radius: 50%;
+        background: rgba(0, 0, 0, 0.5);
+        border: 2px solid rgba(0, 255, 136, 0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.6rem;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+
+      .electrode:hover {
+        transform: scale(1.1);
+        border-color: rgba(0, 255, 136, 0.5);
+      }
+
+      .electrode.active {
+        background: radial-gradient(
+          circle,
+          rgba(0, 255, 136, 0.3) 0%,
+          rgba(0, 255, 136, 0.1) 100%
+        );
+        border-color: #00ff88;
+        box-shadow: 0 0 20px rgba(0, 255, 136, 0.6);
+        animation: electrodeGlow 2s ease-in-out infinite;
+      }
+
+      @keyframes electrodeGlow {
+        0%,
+        100% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.05);
+        }
+      }
+
+      /* コントロールパネル */
+      .control-panel {
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+        padding: 25px;
+        background: rgba(255, 255, 255, 0.02);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 20px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+      }
+
+      button {
+        padding: 12px 30px;
+        background: linear-gradient(
+          135deg,
+          rgba(0, 255, 136, 0.1) 0%,
+          rgba(0, 188, 212, 0.1) 100%
+        );
+        color: #00ff88;
+        border: 1px solid rgba(0, 255, 136, 0.3);
+        border-radius: 10px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+      }
+
+      button::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          rgba(0, 255, 136, 0.2),
+          transparent
+        );
+        transition: left 0.5s ease;
+      }
+
+      button:hover::before {
+        left: 100%;
+      }
+
+      button:hover {
+        background: linear-gradient(
+          135deg,
+          rgba(0, 255, 136, 0.2) 0%,
+          rgba(0, 188, 212, 0.2) 100%
+        );
+        border-color: rgba(0, 255, 136, 0.5);
+        transform: translateY(-2px);
+        box-shadow: 0 5px 20px rgba(0, 255, 136, 0.3);
+      }
+
+      button:active {
+        transform: translateY(0);
+      }
+
+      button:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+        background: rgba(128, 128, 128, 0.1);
+        border-color: rgba(128, 128, 128, 0.3);
+      }
+
+      button.primary {
+        background: linear-gradient(135deg, #00ff88 0%, #00bcd4 100%);
+        color: #000;
+        border: none;
+        font-weight: bold;
+      }
+
+      button.primary:hover {
+        box-shadow: 0 5px 30px rgba(0, 255, 136, 0.5);
+      }
+
+      button.danger {
+        background: linear-gradient(
+          135deg,
+          rgba(255, 0, 127, 0.1) 0%,
+          rgba(255, 0, 0, 0.1) 100%
+        );
+        color: #ff007f;
+        border-color: rgba(255, 0, 127, 0.3);
+      }
+
+      button.danger:hover {
+        background: linear-gradient(
+          135deg,
+          rgba(255, 0, 127, 0.2) 0%,
+          rgba(255, 0, 0, 0.2) 100%
+        );
+        border-color: rgba(255, 0, 127, 0.5);
+        box-shadow: 0 5px 20px rgba(255, 0, 127, 0.3);
+      }
+
+      /* バイノーラルインジケーター */
+      .binaural-indicator {
+        padding: 20px;
+        background: linear-gradient(
+          135deg,
+          rgba(255, 0, 127, 0.05) 0%,
+          rgba(127, 0, 255, 0.05) 100%
+        );
+        border: 1px solid rgba(255, 0, 127, 0.2);
+        border-radius: 15px;
+        display: none;
+      }
+
+      .binaural-indicator.active {
+        display: block;
+        animation: binauralPulse 3s ease-in-out infinite;
+      }
+
+      @keyframes binauralPulse {
+        0%,
+        100% {
+          opacity: 0.8;
+        }
+        50% {
+          opacity: 1;
+        }
+      }
+
+      .binaural-display {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin-top: 15px;
+      }
+
+      .freq-channel {
+        text-align: center;
+      }
+
+      .freq-value {
+        font-size: 2rem;
+        font-weight: bold;
+        background: linear-gradient(135deg, #ff007f 0%, #7f00ff 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      .freq-label {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        opacity: 0.5;
+        margin-top: 5px;
+      }
+
+      /* ログエリア */
+      .log-panel {
+        margin-top: 20px;
+        padding: 20px;
+        background: rgba(0, 0, 0, 0.5);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 20px;
+        max-height: 200px;
+        overflow-y: auto;
+      }
+
+      .log-panel::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      .log-panel::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.02);
+        border-radius: 3px;
+      }
+
+      .log-panel::-webkit-scrollbar-thumb {
+        background: rgba(0, 255, 136, 0.3);
+        border-radius: 3px;
+      }
+
+      .log-entry {
+        padding: 10px 15px;
+        margin-bottom: 8px;
+        background: rgba(255, 255, 255, 0.02);
+        border-left: 3px solid rgba(0, 255, 136, 0.5);
+        border-radius: 8px;
+        font-size: 0.85rem;
+        animation: slideIn 0.3s ease;
+      }
+
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateX(-20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+
+      .log-time {
+        color: #00ff88;
+        font-weight: bold;
+        margin-right: 10px;
+      }
+
+      /* レスポンシブ */
+      @media (max-width: 1400px) {
+        .main-layout {
+          grid-template-columns: 1fr;
+        }
+
+        .left-sidebar,
+        .right-sidebar {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 20px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="main-container">
+      <!-- ヘッダー -->
+      <div class="header">
+        <h1>PROFESSIONAL EEG SLEEP ANALYSIS</h1>
+        <div class="header-info">
+          <div class="status-indicator">
+            <div class="status-dot"></div>
+            <span id="systemStatus">System Ready</span>
+          </div>
+          <div style="color: #00ff88; font-size: 0.9rem">
+            <span id="currentDateTime"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- メインレイアウト -->
+      <div class="main-layout">
+        <!-- 左サイドバー -->
+        <div class="left-sidebar">
+          <div class="panel">
+            <div class="stage-indicator">
+              <div
+                style="
+                  font-size: 0.8rem;
+                  opacity: 0.5;
+                  text-transform: uppercase;
+                  letter-spacing: 2px;
+                "
+              >
+                Current Stage
+              </div>
+              <div class="current-stage" id="bigStageDisplay">WAKE</div>
+              <div class="stage-subtitle" id="stageDescription">
+                Alpha Dominant (8-13Hz)
+              </div>
+            </div>
+
+            <div class="stage-list">
+              <div class="stage-item active" id="stage-wake">
+                <div style="font-weight: bold; margin-bottom: 4px">WAKE</div>
+                <div style="font-size: 0.7rem; opacity: 0.6">
+                  α: 8-13Hz (20-50μV)
+                </div>
+              </div>
+              <div class="stage-item" id="stage-n1">
+                <div style="font-weight: bold; margin-bottom: 4px">
+                  Stage N1
+                </div>
+                <div style="font-size: 0.7rem; opacity: 0.6">
+                  θ: 4-7Hz (&lt;50μV)
+                </div>
+              </div>
+              <div class="stage-item" id="stage-n2">
+                <div style="font-weight: bold; margin-bottom: 4px">
+                  Stage N2
+                </div>
+                <div style="font-size: 0.7rem; opacity: 0.6">
+                  Spindles: 12-14Hz
+                </div>
+              </div>
+              <div class="stage-item" id="stage-n3">
+                <div style="font-weight: bold; margin-bottom: 4px">
+                  Stage N3
+                </div>
+                <div style="font-size: 0.7rem; opacity: 0.6">
+                  δ: 0.5-4Hz (&gt;75μV)
+                </div>
+              </div>
+              <div class="stage-item" id="stage-rem">
+                <div style="font-weight: bold; margin-bottom: 4px">
+                  REM Sleep
+                </div>
+                <div style="font-size: 0.7rem; opacity: 0.6">
+                  Sawtooth: 2-6Hz
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel electrode-map">
+            <div
+              style="
+                font-size: 0.9rem;
+                text-align: center;
+                margin-bottom: 10px;
+                opacity: 0.7;
+              "
+            >
+              10-20 SYSTEM MAP
+            </div>
+            <div class="electrode-grid" id="electrodeMap"></div>
+          </div>
+        </div>
+
+        <!-- 中央：波形表示 -->
+        <div class="waveform-container">
+          <div class="waveform-header">
+            <div class="waveform-title">EEG Waveforms - 256Hz Sampling</div>
+            <div class="montage-selector">
+              <select id="montage">
+                <option value="referential">Referential Montage</option>
+                <option value="bipolar">Bipolar Montage</option>
+                <option value="average">Average Reference</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="channels-display">
+            <div class="channel-row">
+              <div class="channel-label">Fp1-A1</div>
+              <canvas class="channel-canvas" id="canvas-fp1"></canvas>
+            </div>
+            <div class="channel-row">
+              <div class="channel-label">F3-A1</div>
+              <canvas class="channel-canvas" id="canvas-f3"></canvas>
+            </div>
+            <div class="channel-row">
+              <div class="channel-label">C3-A2</div>
+              <canvas class="channel-canvas" id="canvas-c3"></canvas>
+            </div>
+            <div class="channel-row">
+              <div class="channel-label">C4-A1</div>
+              <canvas class="channel-canvas" id="canvas-c4"></canvas>
+            </div>
+            <div class="channel-row">
+              <div class="channel-label">O1-A1</div>
+              <canvas class="channel-canvas" id="canvas-o1"></canvas>
+            </div>
+            <div class="channel-row">
+              <div class="channel-label">Cz-A1</div>
+              <canvas class="channel-canvas" id="canvas-cz"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- 右サイドバー -->
+        <div class="right-sidebar">
+          <div class="panel">
+            <div class="metrics-grid">
+              <div class="metric-card">
+                <div class="metric-label">Duration</div>
+                <div class="metric-value" id="duration">00:00</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Efficiency</div>
+                <div class="metric-value" id="efficiency">--%</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">REM Latency</div>
+                <div class="metric-value" id="remLatency">--</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Spindles/min</div>
+                <div class="metric-value" id="spindleRate">0.0</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel spectrum-analyzer">
+            <div class="spectrum-title">Power Spectrum Density</div>
+            <div class="spectrum-bars">
+              <div class="spectrum-bar">
+                <div class="bar-container">
+                  <div class="bar-fill" id="deltaBar" style="height: 20%"></div>
+                </div>
+                <div class="bar-label">Delta<br />0.5-4Hz</div>
+              </div>
+              <div class="spectrum-bar">
+                <div class="bar-container">
+                  <div class="bar-fill" id="thetaBar" style="height: 30%"></div>
+                </div>
+                <div class="bar-label">Theta<br />4-7Hz</div>
+              </div>
+              <div class="spectrum-bar">
+                <div class="bar-container">
+                  <div class="bar-fill" id="alphaBar" style="height: 50%"></div>
+                </div>
+                <div class="bar-label">Alpha<br />8-13Hz</div>
+              </div>
+              <div class="spectrum-bar">
+                <div class="bar-container">
+                  <div class="bar-fill" id="sigmaBar" style="height: 25%"></div>
+                </div>
+                <div class="bar-label">Sigma<br />12-14Hz</div>
+              </div>
+              <div class="spectrum-bar">
+                <div class="bar-container">
+                  <div class="bar-fill" id="betaBar" style="height: 40%"></div>
+                </div>
+                <div class="bar-label">Beta<br />15-30Hz</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel binaural-indicator" id="binauralPanel">
+            <div
+              style="
+                text-align: center;
+                font-size: 0.9rem;
+                margin-bottom: 10px;
+                opacity: 0.7;
+              "
+            >
+              BINAURAL BEAT THERAPY
+            </div>
+            <div class="binaural-display">
+              <div class="freq-channel">
+                <div class="freq-value" id="leftFreq">200</div>
+                <div class="freq-label">Left (Hz)</div>
+              </div>
+              <div class="freq-channel">
+                <div class="freq-value" id="rightFreq">208</div>
+                <div class="freq-label">Right (Hz)</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- コントロールパネル -->
+      <div class="control-panel">
+        <button id="startBtn" class="primary">START RECORDING</button>
+        <button id="stopBtn" class="danger" disabled>STOP</button>
+        <button id="simulateN3Btn">SIMULATE N3</button>
+        <button id="simulateRemBtn">SIMULATE REM</button>
+        <button id="spindleBtn">GENERATE SPINDLE</button>
+        <button id="kComplexBtn">K-COMPLEX</button>
+        <button id="binauralBtn">TEST BINAURAL</button>
+      </div>
+
+      <!-- ログパネル -->
+      <div class="log-panel">
+        <div id="logContainer"></div>
+      </div>
+    </div>
+
+    <script>
+      // ===========================================
+      // Professional EEG Sleep Analysis System
+      // ===========================================
+
+      // グローバル変数
+      let audioContext = null;
+      let isRecording = false;
+      let recordingInterval = null;
+      let elapsedSeconds = 0;
+      let timeInterval = null;
+      let binauralOscillators = { left: null, right: null };
+      let gainNode = null;
+
+      // 10-20システムチャンネル定義
+      const CHANNELS = {
+        Fp1: { x: 1, y: 0, region: "frontal" },
+        Fp2: { x: 3, y: 0, region: "frontal" },
+        F7: { x: 0, y: 1, region: "frontal" },
+        F3: { x: 1, y: 1, region: "frontal" },
+        Fz: { x: 2, y: 1, region: "frontal" },
+        F4: { x: 3, y: 1, region: "frontal" },
+        F8: { x: 4, y: 1, region: "frontal" },
+        T3: { x: 0, y: 2, region: "temporal" },
+        C3: { x: 1, y: 2, region: "central" },
+        Cz: { x: 2, y: 2, region: "central" },
+        C4: { x: 3, y: 2, region: "central" },
+        T4: { x: 4, y: 2, region: "temporal" },
+        T5: { x: 0, y: 3, region: "temporal" },
+        P3: { x: 1, y: 3, region: "parietal" },
+        Pz: { x: 2, y: 3, region: "parietal" },
+        P4: { x: 3, y: 3, region: "parietal" },
+        T6: { x: 4, y: 3, region: "temporal" },
+        O1: { x: 1, y: 4, region: "occipital" },
+        O2: { x: 3, y: 4, region: "occipital" },
+      };
+
+      // 睡眠段階定義
+      const SLEEP_STAGES = {
+        WAKE: {
+          name: "WAKE",
+          desc: "Alpha Dominant (8-13Hz)",
+          delta: 0.2,
+          theta: 0.3,
+          alpha: 0.8,
+          sigma: 0.1,
+          beta: 0.6,
+        },
+        N1: {
+          name: "N1",
+          desc: "Theta Activity (4-7Hz)",
+          delta: 0.3,
+          theta: 0.6,
+          alpha: 0.3,
+          sigma: 0.1,
+          beta: 0.2,
+        },
+        N2: {
+          name: "N2",
+          desc: "Sleep Spindles Present",
+          delta: 0.4,
+          theta: 0.4,
+          alpha: 0.2,
+          sigma: 0.5,
+          beta: 0.1,
+        },
+        N3: {
+          name: "N3",
+          desc: "Delta Waves (>75μV)",
+          delta: 0.9,
+          theta: 0.2,
+          alpha: 0.1,
+          sigma: 0.1,
+          beta: 0.05,
+        },
+        REM: {
+          name: "REM",
+          desc: "Rapid Eye Movement",
+          delta: 0.3,
+          theta: 0.7,
+          alpha: 0.4,
+          sigma: 0.1,
+          beta: 0.4,
+        },
+      };
+
+      // 高精度脳波シミュレータ
+      class AdvancedEEGSimulator {
+        constructor() {
+          this.samplingRate = 256;
+          this.currentStage = "WAKE";
+          this.stageProgress = 0;
+          this.channels = {};
+          this.spindleActive = false;
+          this.kComplexActive = false;
+          this.lastSpindleTime = 0;
+          this.lastKComplexTime = 0;
+
+          Object.keys(CHANNELS).forEach((ch) => {
+            this.channels[ch] = [];
+          });
+        }
+
+        updateStage() {
+          this.stageProgress++;
+          const cycleMinutes = this.stageProgress;
+          const cyclePosition = (cycleMinutes % 90) / 90;
+
+          if (cyclePosition < 0.05) this.currentStage = "WAKE";
+          else if (cyclePosition < 0.15) this.currentStage = "N1";
+          else if (cyclePosition < 0.4) this.currentStage = "N2";
+          else if (cyclePosition < 0.6) this.currentStage = "N3";
+          else if (cyclePosition < 0.75) this.currentStage = "N2";
+          else this.currentStage = "REM";
+
+          return this.currentStage;
+        }
+
+        generateSpindle(t) {
+          const frequency = 12 + Math.random() * 3;
+          const amplitude = 15 + Math.random() * 10;
+          const envelope = Math.sin((Math.PI * t) / 0.75);
+          return amplitude * envelope * Math.sin(2 * Math.PI * frequency * t);
+        }
+
+        generateKComplex(t) {
+          if (t < 0.2)
+            return -50 * Math.exp(-t / 0.1) * Math.sin(2 * Math.PI * 2 * t);
+          else if (t < 0.55)
+            return (
+              -100 * Math.exp(-(t - 0.2) / 0.2) * Math.sin(2 * Math.PI * 1 * t)
+            );
+          else if (t < 0.9)
+            return (
+              60 * Math.exp(-(t - 0.55) / 0.2) * Math.sin(2 * Math.PI * 1.5 * t)
+            );
+          return 0;
+        }
+
+        generateSawtoothWave(t) {
+          const frequency = 2 + Math.random() * 4;
+          const amplitude = 40 + Math.random() * 60;
+          return amplitude * (2 * ((t * frequency) % 1) - 1);
+        }
+
+        generateChannelData(channelName) {
+          const data = [];
+          const channelInfo = CHANNELS[channelName];
+          const region = channelInfo.region;
+          const currentTime = Date.now();
+
+          for (let i = 0; i < this.samplingRate / 10; i++) {
+            const t = i / this.samplingRate;
+            let value = 0;
+
+            switch (this.currentStage) {
+              case "WAKE":
+                if (region === "occipital") {
+                  value += Math.sin(2 * Math.PI * 10 * t) * 35;
+                }
+                value += Math.sin(2 * Math.PI * 20 * t) * 10;
+                value += Math.random() * 5;
+                break;
+
+              case "N1":
+                if (region === "central" && Math.random() > 0.98) {
+                  value += -100 * Math.exp(-t * 10);
+                }
+                value += Math.sin(2 * Math.PI * 5.5 * t) * 25;
+                value += Math.sin(2 * Math.PI * 9 * t) * 10;
+                value += Math.random() * 3;
+                break;
+
+              case "N2":
+                if (
+                  (region === "central" || region === "parietal") &&
+                  currentTime - this.lastSpindleTime > 30000
+                ) {
+                  this.spindleActive = true;
+                  this.lastSpindleTime = currentTime;
+                }
+
+                if (this.spindleActive && t < 1.5) {
+                  value += this.generateSpindle(t);
+                } else {
+                  this.spindleActive = false;
+                }
+
+                if (
+                  (region === "frontal" || region === "central") &&
+                  Math.random() > 0.995 &&
+                  currentTime - this.lastKComplexTime > 60000
+                ) {
+                  this.kComplexActive = true;
+                  this.lastKComplexTime = currentTime;
+                }
+
+                if (this.kComplexActive && t < 0.9) {
+                  value += this.generateKComplex(t);
+                } else {
+                  this.kComplexActive = false;
+                }
+
+                value += Math.sin(2 * Math.PI * 6 * t) * 15;
+                value += Math.random() * 2;
+                break;
+
+              case "N3":
+                value += Math.sin(2 * Math.PI * 1 * t) * 100;
+                value += Math.sin(2 * Math.PI * 2 * t) * 80;
+                value += Math.sin(2 * Math.PI * 0.5 * t) * 60;
+                value += Math.random() * 2;
+                break;
+
+              case "REM":
+                if (region === "frontal" && Math.random() > 0.95) {
+                  value += this.generateSawtoothWave(t);
+                }
+
+                if (channelName === "Fp1" || channelName === "Fp2") {
+                  if (Math.random() > 0.98) {
+                    value +=
+                      (channelName === "Fp1" ? 1 : -1) * 80 * Math.exp(-t * 20);
+                  }
+                }
+
+                value += Math.sin(2 * Math.PI * 6 * t) * 20;
+                value += Math.sin(2 * Math.PI * 15 * t) * 10;
+                value += Math.random() * 5;
+                break;
+            }
+
+            if (region === "temporal") {
+              value += Math.random() * 3;
+            }
+
+            data.push(value);
+          }
+
+          return data;
+        }
+
+        generateAllChannels() {
+          const channelData = {};
+          Object.keys(CHANNELS).forEach((ch) => {
+            channelData[ch] = this.generateChannelData(ch);
+          });
+          return channelData;
+        }
+      }
+
+      // 波形ビジュアライザー
+      class WaveformVisualizer {
+        constructor(canvasId, channelName) {
+          this.canvas = document.getElementById(canvasId);
+          this.ctx = this.canvas.getContext("2d");
+          this.channelName = channelName;
+          this.data = [];
+          this.maxDataPoints = 256 * 3;
+
+          this.setupCanvas();
+        }
+
+        setupCanvas() {
+          const rect = this.canvas.getBoundingClientRect();
+          const dpr = window.devicePixelRatio || 1;
+          this.canvas.width = rect.width * dpr;
+          this.canvas.height = rect.height * dpr;
+          this.ctx.scale(dpr, dpr);
+          this.canvas.style.width = rect.width + "px";
+          this.canvas.style.height = rect.height + "px";
+        }
+
+        update(newData) {
+          this.data = this.data.concat(newData);
+          if (this.data.length > this.maxDataPoints) {
+            this.data = this.data.slice(-this.maxDataPoints);
+          }
+          this.draw();
+        }
+
+        draw() {
+          const width = this.canvas.width / (window.devicePixelRatio || 1);
+          const height = this.canvas.height / (window.devicePixelRatio || 1);
+
+          // 背景
+          this.ctx.fillStyle = "#000000";
+          this.ctx.fillRect(0, 0, width, height);
+
+          // グリッド
+          this.ctx.strokeStyle = "rgba(0, 255, 136, 0.05)";
+          this.ctx.lineWidth = 0.5;
+
+          for (let i = 0; i <= 8; i++) {
+            const y = (height / 8) * i;
+            this.ctx.beginPath();
+            this.ctx.moveTo(0, y);
+            this.ctx.lineTo(width, y);
+            this.ctx.stroke();
+          }
+
+          for (let i = 0; i <= 20; i++) {
+            const x = (width / 20) * i;
+            this.ctx.beginPath();
+            this.ctx.moveTo(x, 0);
+            this.ctx.lineTo(x, height);
+            this.ctx.stroke();
+          }
+
+          // 波形
+          if (this.data.length > 0) {
+            // グロー効果のための重ね描き
+            this.ctx.shadowBlur = 10;
+            this.ctx.shadowColor = "#00ff88";
+
+            this.ctx.strokeStyle = "#00ff88";
+            this.ctx.lineWidth = 1;
+            this.ctx.beginPath();
+
+            const xStep = width / this.maxDataPoints;
+            const yMid = height / 2;
+            const yScale = height / 300;
+
+            for (let i = 0; i < this.data.length; i++) {
+              const x = i * xStep;
+              const y = yMid - this.data[i] * yScale;
+
+              if (i === 0) {
+                this.ctx.moveTo(x, y);
+              } else {
+                this.ctx.lineTo(x, y);
+              }
+            }
+
+            this.ctx.stroke();
+            this.ctx.shadowBlur = 0;
+          }
+        }
+      }
+
+      // バイノーラル音生成器
+      class BinauralBeatGenerator {
+        constructor() {
+          this.isPlaying = false;
+        }
+
+        start(baseFreq = 200, beatFreq = 8) {
+          if (this.isPlaying) return;
+
+          if (!audioContext) {
+            audioContext = new (window.AudioContext ||
+              window.webkitAudioContext)();
+          }
+
+          gainNode = audioContext.createGain();
+          gainNode.gain.value = 0.15;
+          gainNode.connect(audioContext.destination);
+
+          binauralOscillators.left = audioContext.createOscillator();
+          binauralOscillators.left.frequency.value = baseFreq;
+          binauralOscillators.left.type = "sine";
+
+          binauralOscillators.right = audioContext.createOscillator();
+          binauralOscillators.right.frequency.value = baseFreq + beatFreq;
+          binauralOscillators.right.type = "sine";
+
+          const pannerLeft = audioContext.createStereoPanner();
+          pannerLeft.pan.value = -1;
+          const pannerRight = audioContext.createStereoPanner();
+          pannerRight.pan.value = 1;
+
+          binauralOscillators.left.connect(pannerLeft);
+          binauralOscillators.right.connect(pannerRight);
+          pannerLeft.connect(gainNode);
+          pannerRight.connect(gainNode);
+
+          gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+          gainNode.gain.linearRampToValueAtTime(
+            0.15,
+            audioContext.currentTime + 0.5
+          );
+
+          binauralOscillators.left.start();
+          binauralOscillators.right.start();
+
+          this.isPlaying = true;
+
+          document.getElementById("leftFreq").textContent = baseFreq;
+          document.getElementById("rightFreq").textContent =
+            baseFreq + beatFreq;
+          document.getElementById("binauralPanel").classList.add("active");
+
+          addLog(
+            `Binaural beat therapy activated: ${baseFreq}Hz/${
+              baseFreq + beatFreq
+            }Hz (Δ${beatFreq}Hz)`
+          );
+        }
+
+        stop() {
+          if (!this.isPlaying) return;
+
+          if (gainNode) {
+            gainNode.gain.linearRampToValueAtTime(
+              0,
+              audioContext.currentTime + 0.5
+            );
+          }
+
+          setTimeout(() => {
+            if (binauralOscillators.left) {
+              binauralOscillators.left.stop();
+              binauralOscillators.left = null;
+            }
+            if (binauralOscillators.right) {
+              binauralOscillators.right.stop();
+              binauralOscillators.right = null;
+            }
+            document.getElementById("binauralPanel").classList.remove("active");
+          }, 500);
+
+          this.isPlaying = false;
+          addLog("Binaural beat therapy deactivated");
+        }
+      }
+
+      // ログ機能
+      function addLog(message) {
+        const logContainer = document.getElementById("logContainer");
+        const entry = document.createElement("div");
+        entry.className = "log-entry";
+
+        const time = new Date();
+        const timeStr = time.toLocaleTimeString("en-US", { hour12: false });
+
+        entry.innerHTML = `<span class="log-time">[${timeStr}]</span>${message}`;
+        logContainer.insertBefore(entry, logContainer.firstChild);
+
+        while (logContainer.children.length > 8) {
+          logContainer.removeChild(logContainer.lastChild);
+        }
+      }
+
+      // UI更新
+      function updateUI(stage) {
+        // ステージカード更新
+        document.querySelectorAll(".stage-item").forEach((card) => {
+          card.classList.remove("active", "rem-active");
+        });
+
+        const stageId = `stage-${stage.toLowerCase()}`;
+        const stageCard = document.getElementById(stageId);
+        if (stageCard) {
+          stageCard.classList.add("active");
+          if (stage === "REM") {
+            stageCard.classList.add("rem-active");
+          }
+        }
+
+        // ステージ表示更新
+        const stageInfo = SLEEP_STAGES[stage];
+        document.getElementById("bigStageDisplay").textContent = stageInfo.name;
+        document.getElementById("stageDescription").textContent =
+          stageInfo.desc;
+
+        // スペクトラム更新
+        document.getElementById("deltaBar").style.height = `${
+          stageInfo.delta * 100
+        }%`;
+        document.getElementById("thetaBar").style.height = `${
+          stageInfo.theta * 100
+        }%`;
+        document.getElementById("alphaBar").style.height = `${
+          stageInfo.alpha * 100
+        }%`;
+        document.getElementById("sigmaBar").style.height = `${
+          stageInfo.sigma * 100
+        }%`;
+        document.getElementById("betaBar").style.height = `${
+          stageInfo.beta * 100
+        }%`;
+      }
+
+      // 記録ループ
+      function recordingLoop() {
+        const stage = eegSimulator.updateStage();
+        const channelData = eegSimulator.generateAllChannels();
+
+        visualizers.fp1.update(channelData.Fp1);
+        visualizers.f3.update(channelData.F3);
+        visualizers.c3.update(channelData.C3);
+        visualizers.c4.update(channelData.C4);
+        visualizers.o1.update(channelData.O1);
+        visualizers.cz.update(channelData.Cz);
+
+        updateUI(stage);
+
+        if (stage === "REM" && !binauralGenerator.isPlaying) {
+          binauralGenerator.start(200, 8);
+          addLog("REM sleep detected - Initiating theta wave entrainment");
+        } else if (stage !== "REM" && binauralGenerator.isPlaying) {
+          binauralGenerator.stop();
+        }
+
+        if (stage !== lastStage) {
+          addLog(`Sleep stage transition: ${SLEEP_STAGES[stage].name}`);
+          lastStage = stage;
+
+          if (stage === "REM" && !remLatencyCalculated) {
+            const remLatency = Math.floor(elapsedSeconds / 60);
+            document.getElementById(
+              "remLatency"
+            ).textContent = `${remLatency}m`;
+            remLatencyCalculated = true;
+          }
+        }
+
+        if (stage === "N2") {
+          spindleCount += Math.random() > 0.7 ? 1 : 0;
+          const spindleRate = (spindleCount / (elapsedSeconds / 60)).toFixed(1);
+          document.getElementById("spindleRate").textContent = spindleRate;
+        }
+
+        if (elapsedSeconds > 60) {
+          const efficiency = Math.min(
+            ((elapsedSeconds * 0.85) / elapsedSeconds) * 100,
+            95
+          );
+          document.getElementById(
+            "efficiency"
+          ).textContent = `${efficiency.toFixed(0)}%`;
+        }
+      }
+
+      // 電極マップ作成
+      function createElectrodeMap() {
+        const mapContainer = document.getElementById("electrodeMap");
+        const electrodeOrder = [
+          "Fp1",
+          "Fp2",
+          null,
+          null,
+          null,
+          "F7",
+          "F3",
+          "Fz",
+          "F4",
+          "F8",
+          "T3",
+          "C3",
+          "Cz",
+          "C4",
+          "T4",
+          "T5",
+          "P3",
+          "Pz",
+          "P4",
+          "T6",
+          null,
+          "O1",
+          null,
+          "O2",
+          null,
+        ];
+
+        electrodeOrder.forEach((name) => {
+          const electrode = document.createElement("div");
+          if (name) {
+            electrode.className = "electrode";
+            electrode.textContent = name;
+            electrode.title = name;
+
+            const displayChannels = ["Fp1", "F3", "C3", "C4", "O1", "Cz"];
+            if (displayChannels.includes(name)) {
+              electrode.classList.add("active");
+            }
+
+            electrode.addEventListener("click", () => {
+              electrode.classList.toggle("active");
+              addLog(
+                `Electrode ${name} ${
+                  electrode.classList.contains("active")
+                    ? "activated"
+                    : "deactivated"
+                }`
+              );
+            });
+          } else {
+            electrode.style.visibility = "hidden";
+          }
+          mapContainer.appendChild(electrode);
+        });
+      }
+
+      // 日時表示更新
+      function updateDateTime() {
+        const now = new Date();
+        const dateStr = now.toLocaleDateString("en-US", {
+          weekday: "short",
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+        });
+        const timeStr = now.toLocaleTimeString("en-US", { hour12: false });
+        document.getElementById(
+          "currentDateTime"
+        ).textContent = `${dateStr} | ${timeStr}`;
+      }
+
+      // 初期化
+      const eegSimulator = new AdvancedEEGSimulator();
+      const binauralGenerator = new BinauralBeatGenerator();
+
+      const visualizers = {
+        fp1: new WaveformVisualizer("canvas-fp1", "Fp1-A1"),
+        f3: new WaveformVisualizer("canvas-f3", "F3-A1"),
+        c3: new WaveformVisualizer("canvas-c3", "C3-A2"),
+        c4: new WaveformVisualizer("canvas-c4", "C4-A1"),
+        o1: new WaveformVisualizer("canvas-o1", "O1-A1"),
+        cz: new WaveformVisualizer("canvas-cz", "Cz-A1"),
+      };
+
+      let lastStage = "WAKE";
+      let spindleCount = 0;
+      let remLatencyCalculated = false;
+
+      // イベントリスナー
+      document.getElementById("startBtn").addEventListener("click", () => {
+        if (!isRecording) {
+          isRecording = true;
+          elapsedSeconds = 0;
+          spindleCount = 0;
+          remLatencyCalculated = false;
+
+          document.getElementById("startBtn").disabled = true;
+          document.getElementById("stopBtn").disabled = false;
+          document.getElementById("systemStatus").textContent = "Recording";
+
+          addLog("EEG recording initiated - 256Hz sampling across 19 channels");
+
+          recordingInterval = setInterval(recordingLoop, 100);
+
+          timeInterval = setInterval(() => {
+            elapsedSeconds++;
+            const minutes = Math.floor(elapsedSeconds / 60);
+            const seconds = elapsedSeconds % 60;
+            document.getElementById("duration").textContent = `${minutes
+              .toString()
+              .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+          }, 1000);
+        }
+      });
+
+      document.getElementById("stopBtn").addEventListener("click", () => {
+        if (isRecording) {
+          isRecording = false;
+          document.getElementById("startBtn").disabled = false;
+          document.getElementById("stopBtn").disabled = true;
+          document.getElementById("systemStatus").textContent = "System Ready";
+
+          clearInterval(recordingInterval);
+          clearInterval(timeInterval);
+          binauralGenerator.stop();
+
+          addLog("Recording terminated");
+          addLog(
+            `Total duration: ${Math.floor(elapsedSeconds / 60)}m ${
+              elapsedSeconds % 60
+            }s`
+          );
+        }
+      });
+
+      document.getElementById("simulateN3Btn").addEventListener("click", () => {
+        eegSimulator.currentStage = "N3";
+        addLog("Simulating N3 deep sleep - High amplitude delta waves");
+        if (!isRecording) recordingLoop();
+      });
+
+      document
+        .getElementById("simulateRemBtn")
+        .addEventListener("click", () => {
+          eegSimulator.currentStage = "REM";
+          addLog("Simulating REM sleep - Sawtooth waves present");
+          if (!isRecording) recordingLoop();
+        });
+
+      document.getElementById("spindleBtn").addEventListener("click", () => {
+        eegSimulator.currentStage = "N2";
+        eegSimulator.spindleActive = true;
+        addLog("Generating sleep spindle (12-14Hz, 0.5-2s duration)");
+        if (!isRecording) recordingLoop();
+      });
+
+      document.getElementById("kComplexBtn").addEventListener("click", () => {
+        eegSimulator.currentStage = "N2";
+        eegSimulator.kComplexActive = true;
+        addLog("Generating K-complex (>75μV, >0.5s duration)");
+        if (!isRecording) recordingLoop();
+      });
+
+      document.getElementById("binauralBtn").addEventListener("click", () => {
+        if (binauralGenerator.isPlaying) {
+          binauralGenerator.stop();
+        } else {
+          binauralGenerator.start(440, 10);
+          setTimeout(() => binauralGenerator.stop(), 5000);
+        }
+      });
+
+      document.getElementById("montage").addEventListener("change", (e) => {
+        const montage = e.target.value;
+        addLog(`Montage changed to: ${montage}`);
+
+        const labels = document.querySelectorAll(".channel-label");
+        if (montage === "bipolar") {
+          labels[0].textContent = "Fp1-F3";
+          labels[1].textContent = "F3-C3";
+          labels[2].textContent = "C3-P3";
+          labels[3].textContent = "P3-O1";
+          labels[4].textContent = "Fp2-F4";
+          labels[5].textContent = "Fz-Cz";
+        } else if (montage === "average") {
+          labels[0].textContent = "Fp1-AVG";
+          labels[1].textContent = "F3-AVG";
+          labels[2].textContent = "C3-AVG";
+          labels[3].textContent = "C4-AVG";
+          labels[4].textContent = "O1-AVG";
+          labels[5].textContent = "Cz-AVG";
+        } else {
+          labels[0].textContent = "Fp1-A1";
+          labels[1].textContent = "F3-A1";
+          labels[2].textContent = "C3-A2";
+          labels[3].textContent = "C4-A1";
+          labels[4].textContent = "O1-A1";
+          labels[5].textContent = "Cz-A1";
+        }
+      });
+
+      // 初期化処理
+      createElectrodeMap();
+      setInterval(updateDateTime, 1000);
+      updateDateTime();
+
+      Object.values(visualizers).forEach((viz) => viz.draw());
+
+      addLog("System initialized - Professional EEG Sleep Analysis");
+      addLog("19-channel 10-20 system ready - 256Hz sampling rate");
+    </script>
+  </body>
+</html>
