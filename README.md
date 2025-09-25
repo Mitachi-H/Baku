@@ -1,38 +1,62 @@
-# Bakuのデモ用リポジトリ
+# Baku デモ用リポジトリ
 
 ![アプリの概要・要素技術](./images/図1.png)
 
-上図の構成での開発を行います。
+上図の構成で開発を進めています。本リポジトリでは、提出用のモックコード一式を共有しています。
 
-## モックとして提示する機能
-ここでは、ソフトウェア部分のMockを提示します。ハードウェアについては、提出資料に記載します。
-
+## セットアップ
+```
 pip install -r requirements.txt
+```
 
-・脳波データの検知モックコード (rem_analysis.py)
-    use example: python rem_analysis.py --subject 0 --recording 1 --output-dir results
-    出力はanalysis_outputsに存在します
-    脳波データ, EOGデータをもとに可視化します。
-    補足： Physionetは睡眠中の脳波データを公開しており、これ以外にも様々な睡眠中脳波データが存在します。私たちは現在REM睡眠判定アルゴリズムを改良しています。
+## モック機能一覧
 
-・心拍データから心拍数, 心拍変動を検出するモックコード
-    use example: python hr_analysis.py --subject 1 --output-dir analysis_outputs
-    出力はanalysis_outputsに存在します
-    睡眠中の心拍データから心拍数やRR intervalを検知します。
-・眼球運動の検知モックコード ：　https://github.com/Mitachi-H/dreamdive_emotive
-    私たちは予備実験として、emotive社の脳波計・EOGを使用しています。その実際のコードを添付します。
-・心理療法chatbotのFinetuneに関するモック( demo_mini_llm_cbt.py)
-・心理療法chatbotの実行(demo_llm.py)
-    use example: python therapy_chat_mock.py を実行させてください。localhostが自動的に立ち上がります。
-    現状はLoRAを行っているところで、コードのみとなっています（意味のある応答が出ていません）
-    GPT-4oのAPIを叩く形式にしています。.envにOPENAI_API_KEY=sk-... を設定してください
-    DiaCBT, Cactusなどの公開データベースは容易に使用でき、DreamBankのテキストデータをの使用や、DDNSI 等の重症度指標の実装をしています。今後はこれを専門家監修のもと進歩させる予定です。
+### 脳波データの検知モック `rem_analysis.py`
+- REM 睡眠区間の検知と可視化を行います。
+- 出力は `analysis_outputs/` 配下に保存されます。
 
-・夢を動画化するモック
-    use example: python dream_video_mock.py　を実行させてください。localhostが自動的に立ち上がります。
-    現状はLoRAを行っているところで、コードのみとなっています（意味のある応答が出ていません）
-     夢内容と幸せな記憶を入力すると、音声及び動画で夢内容をよく解釈させたものの後に、幸せな記憶を動画化させたものを接続させて流します。GPT-4oのAPIを叩く形式にしています。.envにOPENAI_API_KEY=sk-... を設定してください。
+使用例:
+```
+python rem_analysis.py --subject 0 --recording 1 --output-dir analysis_outputs
+```
 
-・モックアプリ
-    use example: python demo_server.py
-    感覚刺激を再現しています。脳波を測定し、REM睡眠をdetectすると音などを流します。
+> 補足: PhysioNet などで公開されている睡眠中の脳波・EOG データを用いており、現在も REM 睡眠判定アルゴリズムを改良中です。
+
+### 心拍データ解析モック `hr_analysis.py`
+- 睡眠中の心拍データから心拍数や RR 間隔を推定します。
+- 出力は `analysis_outputs/` に保存されます。
+
+使用例:
+```
+python hr_analysis.py --subject 1 --output-dir analysis_outputs
+```
+
+### 眼球運動検知モック
+- 予備実験で使用した Emotive 社の脳波計・EOG コードを公開しています。
+- リポジトリ: https://github.com/Mitachi-H/dreamdive_emotive
+
+### 心理療法チャットボット関連
+- `demo_mini_llm_cbt.py`: CBT 向けチャットボットのファインチューニング用モック。
+- `demo_llm.py`: 実行モック。以下のコマンドで Web UI がローカルに起動します。
+```
+python therapy_chat_mock.py
+```
+- GPT-4o API を利用するため、`.env` に `OPENAI_API_KEY=sk-...` を設定してください。
+- DiaCBT、Cactus、DreamBank などの公開データセットを利用可能で、DDNSI 等の重症度指標の実装を進めています。
+
+### 夢の動画化モック `dream_video_mock.py`
+- 夢内容とポジティブな記憶を入力すると、音声・動画を生成し連結して再生します。
+```
+python dream_video_mock.py
+```
+- GPT-4o API を利用するため、`.env` に `OPENAI_API_KEY=sk-...` を設定してください。
+
+### モックアプリケーション `demo_server.py`
+- REM 睡眠を検知し、感覚刺激を再現するデモサーバーです。
+```
+python demo_server.py
+```
+
+## 補足
+- ハードウェア構成については、別途提出資料を参照してください。
+- 現在 LoRA を適用中のモジュールは動作イメージを示すコードのみであり、実際の応答品質は調整中です。
